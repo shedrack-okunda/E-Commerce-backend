@@ -6,12 +6,10 @@ const app = express();
 
 const port = process.env.PORT;
 
-app.get("/user", (req, res) => {
-  res.send(
-    "Hello am trying to test this and see if it will render on the screen as the server runs.",
-  );
+app.get("/api", (req, res) => {
+  res.json({ message: "Hello from server!" });
 });
 
 app.listen(port, () => {
-  console.log(`Server running on http://localhost:${port}`);
+  console.log(`Server running on http://localhost:${port}/api`);
 });
