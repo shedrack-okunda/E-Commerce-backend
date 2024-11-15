@@ -9,3 +9,6 @@ const wishlistSchema = new Schema(
   },
   { timestamps: true, versionKey: false },
 );
+
+const Wishlist = mongoose.model("Wishlist", wishlistSchema);
+export default Wishlist;
