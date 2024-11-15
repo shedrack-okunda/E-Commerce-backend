@@ -13,4 +13,5 @@ router
   .patch("/:id", updateById)
   .delete("/:id", deleteById);
 
-export default router;
+const addressRoutes = router;
+export default addressRoutes;

@@ -10,7 +10,8 @@ const router = express.Router();
 router
   .post("/", create)
   .get("/product/:id", getByProductId)
-  .path("/:id", updateById)
+  .patch("/:id", updateById)
   .delete("/:id", deleteById);
 
-export default router;
+const reviewRoutes = router;
+export default reviewRoutes;

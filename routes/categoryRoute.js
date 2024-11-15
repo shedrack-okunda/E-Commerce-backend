@@ -4,4 +4,5 @@ import { getAll } from "../controllers/categoryController.js";
 
 router.get("/", getAll);
 
-export default router;
+const categoryRoutes = router;
+export default categoryRoutes;

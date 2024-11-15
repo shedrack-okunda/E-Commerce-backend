@@ -13,4 +13,5 @@ router
   .patch("/:id", updateById)
   .delete("/:id", deleteById);
 
-export default router;
+const wishlistRoutes = router;
+export default wishlistRoutes;

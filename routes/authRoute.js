@@ -9,7 +9,7 @@ import {
   resetPassword,
   logout,
   checkAuth,
-} from "../controllers/authController";
+} from "../controllers/authController.js";
 import { verifyToken } from "../middleware/VerifyToken.js";
 
 router
@@ -22,4 +22,5 @@ router
   .get("/check-auth", verifyToken, checkAuth)
   .get("/logout", logout);
 
-export default router;
+const authRoutes = router;
+export default authRoutes;

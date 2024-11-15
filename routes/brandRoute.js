@@ -4,4 +4,5 @@ import { getAll } from "../controllers/brandController.js";
 
 router.get("/", getAll);
 
-export default router;
+const brandRoutes = router;
+export default brandRoutes;

@@ -17,4 +17,5 @@ router
   .patch("/undelete/:id", undeleteById)
   .delete("/:id", deleteById);
 
-export default router;
+const productRoutes = router;
+export default productRoutes;

@@ -13,4 +13,5 @@ router
   .get("/user/:id", getByUserId)
   .patch("/:id", updateById);
 
-export default router;
+const orderRoutes = router;
+export default orderRoutes;

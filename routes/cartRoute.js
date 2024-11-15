@@ -15,4 +15,5 @@ router
   .delete("/:id", deleteById)
   .delete("/user/:id", deleteByUserId);
 
-export default router;
+const cartRoutes = router;
+export default cartRoutes;
