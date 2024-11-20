@@ -1,12 +1,12 @@
 import dotenv from "dotenv";
 dotenv.config();
 import jwt from "jsonwebtoken";
-import { sanitizeUser } from "../utils/SanitizeUser.js";
+// import { sanitizeUser } from "../utils/SanitizeUser.js";
 
 export const verifyToken = async (req, res, next) => {
   try {
     // extract the token from request cookies
-    const { token } = req.cookies;
+    const { token } = req.cookies || {};
 
     // if no token returns 401 response
     if (!token) {
@@ -20,7 +20,7 @@ export const verifyToken = async (req, res, next) => {
 
     // checks if decoded info contains legit details, then set that info in req.user and calls next
     if (decodedInfo && decodedInfo.id && decodedInfo.email) {
-      req.user = sanitizeUser(decodedInfo);
+      req.user = decodedInfo;
       next();
     }
 

@@ -10,24 +10,26 @@ import dotenv from "dotenv";
 dotenv.config();
 
 export const signup = async (req, res) => {
+  const { email, password, name } = req.body;
+
   try {
-    const existingUser = await User.findOne({ email: req.body.email });
+    let user = await User.findOne({ email });
 
     // if user already exists
-    if (existingUser) {
+    if (user) {
       return res.status(400).json({ message: "User already exists" });
     }
 
     // hashing the password
-    const hashedPassword = await bcrypt.hash(req.body.password, 10);
+    const hashedPassword = await bcrypt.hash(password, 10);
     req.body.password = hashedPassword;
 
     // creating a new user
-    const createdUser = new User(req.body);
-    await createdUser.save();
+    user = new User({ name, email, password: hashedPassword });
+    await user.save();
 
     // getting secure user info
-    const secureInfo = sanitizeUser(createdUser);
+    const secureInfo = sanitizeUser(user);
 
     // generating jwt token
     const token = generateToken(secureInfo);
@@ -43,9 +45,9 @@ export const signup = async (req, res) => {
       secure: process.env.PRODUCTION === "true" ? true : false,
     });
 
-    res.status(201).json(sanitizeUser(createdUser));
+    res.status(201).json(sanitizeUser(user));
   } catch (error) {
-    console.log(error);
+    console.log(error.message);
     res.status(500).json({
       message: "Error occurred during signup, please try again later",
     });
@@ -281,7 +283,7 @@ export const resetPassword = async (req, res) => {
 
 export const logout = async (req, res) => {
   try {
-    res.cookie("token", {
+    res.clearCookie("token", {
       maxAge: 0,
       sameSite: process.env.PRODUCTION === "true" ? "None" : "Lax",
       httpOnly: true,
