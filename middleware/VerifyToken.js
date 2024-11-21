@@ -19,29 +19,28 @@ export const verifyToken = async (req, res, next) => {
     const decodedInfo = jwt.verify(token, process.env.SECRET_KEY);
 
     // checks if decoded info contains legit details, then set that info in req.user and calls next
-    if (decodedInfo && decodedInfo.id && decodedInfo.email) {
+    if (decodedInfo?.id && decodedInfo?.email) {
       req.user = decodedInfo;
-      next();
+      return next();
     }
 
     // if token is invalid then sends the response accordingly
-    else {
-      return res
-        .status(401)
-        .json({ message: "Invalid Token, please login again" });
-    }
+    return res
+      .status(401)
+      .json({ message: "Invalid Token, please login again" });
   } catch (error) {
     console.log(error);
     if (error instanceof jwt.TokenExpiredError) {
       return res
         .status(401)
         .json({ message: "Token expired, please login again" });
-    } else if (error instanceof jwt.JsonWebTokenError) {
+    }
+
+    if (error instanceof jwt.JsonWebTokenError) {
       return res
         .status(401)
         .json({ message: "Invalid Token, please login again" });
-    } else {
-      return res.status(500).json({ message: "Internal Server Error" });
     }
+    return res.status(500).json({ message: "Internal Server Error" });
   }
 };

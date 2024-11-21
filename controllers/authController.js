@@ -10,7 +10,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 export const signup = async (req, res) => {
-  const { email, password, name } = req.body;
+  const { email, password, username } = req.body;
 
   try {
     let user = await User.findOne({ email });
@@ -25,7 +25,7 @@ export const signup = async (req, res) => {
     req.body.password = hashedPassword;
 
     // creating a new user
-    user = new User({ name, email, password: hashedPassword });
+    user = new User({ username, email, password: hashedPassword });
     await user.save();
 
     // getting secure user info
@@ -37,12 +37,10 @@ export const signup = async (req, res) => {
     // sending jwt token in the response cookies
     res.cookie("token", token, {
       sameSite: process.env.PRODUCTION === "true" ? "None" : "Lax",
-      maxAge: new Date(
-        Date.now() +
-          parseInt(process.env.COOKIE_EXPIRATION_DAYS * 24 * 60 * 60 * 1000),
-      ),
+      maxAge:
+        parseInt(process.env.COOKIE_EXPIRATION_DAYS) * 24 * 60 * 60 * 1000,
       httpOnly: true,
-      secure: process.env.PRODUCTION === "true" ? true : false,
+      secure: process.env.PRODUCTION === "true",
     });
 
     res.status(201).json(sanitizeUser(user));
@@ -55,36 +53,35 @@ export const signup = async (req, res) => {
 };
 
 export const login = async (req, res) => {
+  const { email, password } = req.body;
+
   try {
     // check if user exists or not
-    const existingUser = await User.findOne({ email: req.body.email });
+    const user = await User.findOne({ email });
 
     // if user exists and password matches the hash
-    if (
-      existingUser &&
-      (await bcrypt.compare(req.body.password, existingUser.password))
-    ) {
-      // getting secure user info
-      const secureInfo = sanitizeUser(existingUser);
-
-      // generate jwt token
-      const token = generateToken(secureInfo);
-
-      //   sending jwt token in the response cookies
-      res.cookie("token", token, {
-        sameSite: process.env.PRODUCTION === "true" ? "None" : "Lax",
-        maxAge: new Date(
-          Date.now() +
-            parseInt(process.env.COOKIE_EXPIRATION_DAYS * 24 * 60 * 60 * 1000),
-        ),
-        httpOnly: true,
-        secure: process.env.PRODUCTION === "true" ? true : false,
-      });
-
-      return res.status(200).json(sanitizeUser(existingUser));
+    if (!user || !(await bcrypt.compare(password, user.password))) {
+      res.clearCookie("token");
+      return res.status(404).json({ message: "Invalid Credentials" });
     }
-    res.clearCookie("token");
-    return res.status(404).json({ message: "Invalid Credentials" });
+
+    // getting secure user info
+    const secureInfo = sanitizeUser(user);
+
+    // generate jwt token
+    const token = generateToken(secureInfo);
+
+    //   sending jwt token in the response cookies
+    res.cookie("token", token, {
+      sameSite: process.env.PRODUCTION === "true" ? "None" : "Lax",
+      maxAge:
+        parseInt(process.env.COOKIE_EXPIRATION_DAYS) * 24 * 60 * 60 * 1000,
+
+      httpOnly: true,
+      secure: process.env.PRODUCTION === "true",
+    });
+
+    return res.status(200).json(secureInfo);
   } catch (error) {
     console.log(error);
     res.status(500).json({
@@ -94,19 +91,21 @@ export const login = async (req, res) => {
 };
 
 export const verifyOtp = async (req, res) => {
+  const { userId, otp } = req.body;
+
   try {
     // checks if user id is existing in the user collection
-    const isValidUserId = await User.findById(req.body.userId);
+    const user = await User.findById(userId);
 
     // if user id does not exists then returns a 404 response
-    if (!isValidUserId) {
+    if (!user) {
       return res.status(404).json({
-        message: "User not found, for which the otp has been generated",
+        message: "User not found.",
       });
     }
 
     // checks if otp exists by that user id
-    const isOtpExisting = await Otp.findOne({ user: isValidUserId._id });
+    const isOtpExisting = await Otp.findOne({ user: userId });
 
     // if otp does not exists then returns a 404 response
     if (!isOtpExisting) {
@@ -114,26 +113,20 @@ export const verifyOtp = async (req, res) => {
     }
 
     // checks if the otp is expired, if yes then deletes the otp
-    if (isOtpExisting.expiresAt < new Date()) {
+    if (isOtpExisting.expiresAt < Date.now()) {
       await Otp.findByIdAndDelete(isOtpExisting._id);
-      return res.status(400).json({ message: "Otp has been expired" });
+      return res.status(400).json({ message: "Otp expired" });
     }
 
     // checks if otp is there and matches the hash value then updates the user verified status to true and returns the updated user
-    if (
-      isOtpExisting &&
-      (await bcrypt.compare(req.body.otp, isOtpExisting.otp))
-    ) {
-      await Otp.findByIdAndDelete(isOtpExisting._id);
-      const verifiedUser = await User.findByIdAndUpdate(
-        isValidUserId._id,
-        { isVerified: true },
-        { new: true },
-      );
-      return res.status(200).json(sanitizeUser(verifiedUser));
+    if (isOtpExisting && (await bcrypt.compare(otp, isOtpExisting.otp))) {
+      return res.status(400).json({ message: "Otp is invalid or expired" });
     }
+    await Otp.findByIdAndDelete(isOtpExisting._id);
+    user.isVerified = true;
+    await user.save();
 
-    return res.status(400).json({ message: "Otp is invalid or expired" });
+    return res.status(200).json(sanitizeUser(user));
   } catch (error) {
     console.log(error);
     res.status(500).json({ message: "Some error occurred" });
@@ -141,20 +134,22 @@ export const verifyOtp = async (req, res) => {
 };
 
 export const resendOtp = async (req, res) => {
+  const { user } = req.body;
+
   try {
-    const existingUser = await User.findById(req.body.user);
+    const existingUser = await User.findById(user);
 
     if (!existingUser) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    await Otp.deleteMany({ user: existingUser._id });
+    await Otp.deleteMany({ user });
 
     const otp = generateOTP();
     const hashedOtp = await bcrypt.hash(otp, 10);
 
     const newOtp = new Otp({
-      user: req.body.user,
+      user,
       otp: hashedOtp,
       expiresAt: Date.now() + parseInt(process.env.OTP_EXPIRATION_TIME),
     });
@@ -162,8 +157,8 @@ export const resendOtp = async (req, res) => {
 
     await sendMail(
       existingUser.email,
-      `OTP Verification for your account`,
-      `Your One-Time password (OTP) for account verification is: <b>${otp}</b>.</br> Do not share this OTP with anyone for security reasons`,
+      `OTP Verification`,
+      `Your OTP is: <b>${otp}</b>`,
     );
 
     res.status(201).json({ message: "OTP sent" });
