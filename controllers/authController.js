@@ -81,7 +81,9 @@ export const login = async (req, res) => {
       secure: process.env.PRODUCTION === "true",
     });
 
-    return res.status(200).json(secureInfo);
+    return res
+      .status(200)
+      .json({ status: "SUCCESS", data: secureInfo, message: "User logged in" });
   } catch (error) {
     console.log(error);
     res.status(500).json({
@@ -119,9 +121,11 @@ export const verifyOtp = async (req, res) => {
     }
 
     // checks if otp is there and matches the hash value then updates the user verified status to true and returns the updated user
-    if (isOtpExisting && (await bcrypt.compare(otp, isOtpExisting.otp))) {
-      return res.status(400).json({ message: "Otp is invalid or expired" });
+    const isOtpValid = await bcrypt.compare(otp, isOtpExisting.otp);
+    if (!isOtpValid) {
+      return res.status(400).json({ message: "Otp is invalid" });
     }
+
     await Otp.findByIdAndDelete(isOtpExisting._id);
     user.isVerified = true;
     await user.save();
