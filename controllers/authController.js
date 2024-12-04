@@ -2,7 +2,7 @@ import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 import { sendMail } from "../utils/Email.js";
 import { generateOTP } from "../utils/GenerateOtp.js";
-import Otp from "../models/OTP.js";
+import OTP from "../models/OTP.js";
 import { sanitizeUser } from "../utils/SanitizeUser.js";
 import { generateToken } from "../utils/GenerateToken.js";
 import PasswordResetToken from "../models/PasswordResetToken.js";
@@ -107,7 +107,7 @@ export const verifyOtp = async (req, res) => {
     }
 
     // checks if otp exists by that user id
-    const isOtpExisting = await Otp.findOne({ user: userId });
+    const isOtpExisting = await OTP.findOne({ user: userId });
 
     // if otp does not exists then returns a 404 response
     if (!isOtpExisting) {
@@ -116,7 +116,7 @@ export const verifyOtp = async (req, res) => {
 
     // checks if the otp is expired, if yes then deletes the otp
     if (isOtpExisting.expiresAt < Date.now()) {
-      await Otp.findByIdAndDelete(isOtpExisting._id);
+      await OTP.findByIdAndDelete(isOtpExisting._id);
       return res.status(400).json({ message: "Otp expired" });
     }
 
@@ -126,7 +126,7 @@ export const verifyOtp = async (req, res) => {
       return res.status(400).json({ message: "Otp is invalid" });
     }
 
-    await Otp.findByIdAndDelete(isOtpExisting._id);
+    await OTP.findByIdAndDelete(isOtpExisting._id);
     user.isVerified = true;
     await user.save();
 
@@ -147,12 +147,12 @@ export const resendOtp = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    await Otp.deleteMany({ user });
+    await OTP.deleteMany({ user });
 
     const otp = generateOTP();
     const hashedOtp = await bcrypt.hash(otp, 10);
 
-    const newOtp = new Otp({
+    const newOtp = new OTP({
       user,
       otp: hashedOtp,
       expiresAt: Date.now() + parseInt(process.env.OTP_EXPIRATION_TIME),
